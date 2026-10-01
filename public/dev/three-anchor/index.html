@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#101212" />
+  <title>Three Anchor Sculpture Test</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-height: 100%; margin: 0; background: #101212; color: #ecf1ee; }
+    button, a { font: inherit; }
+    .board { width: min(100vw, 1920px); min-height: 100svh; margin: 0 auto; padding: clamp(20px, 4vw, 68px); display: grid; grid-template-rows: auto 1fr auto; gap: 32px; background: radial-gradient(ellipse at 50% 44%, #1b2625, #101212 64%); }
+    .topline { display: flex; justify-content: space-between; align-items: start; gap: 24px; }
+    .eyebrow { color: #74d5c9; font-size: 12px; font-weight: 750; letter-spacing: .2em; text-transform: uppercase; }
+    h1 { max-width: 900px; margin: 10px 0 8px; font-size: clamp(32px, 5vw, 72px); line-height: .98; letter-spacing: -.055em; }
+    .intro { max-width: 720px; margin: 0; color: #9aa8a3; font-size: clamp(14px, 1.3vw, 19px); line-height: 1.5; }
+    .badge { flex: 0 0 auto; border: 1px solid #334340; border-radius: 999px; padding: 10px 14px; color: #cce8df; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+    .target-row { display: grid; grid-template-columns: repeat(3, minmax(0, 256px)); justify-content: center; align-content: center; gap: 32px; }
+    .target-card { min-width: 0; }
+    .target-card canvas { display: block; width: 100%; aspect-ratio: 1; border: 1px solid #7a8d83; box-shadow: 0 12px 36px #0008; }
+    .target-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; color: #bac6c0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    .target-meta b { color: var(--tone); }
+    .footer { display: flex; align-items: end; justify-content: space-between; gap: 24px; border-top: 1px solid #293331; padding-top: 20px; }
+    .footer p { max-width: 620px; margin: 0; color: #899792; font-size: 13px; line-height: 1.5; }
+    .scan-link { display: flex; align-items: center; gap: 14px; min-width: 230px; }
+    #qr { display: grid; width: 76px; height: 76px; place-items: center; border: 5px solid white; background: white; }
+    #qr canvas, #qr img { width: 66px !important; height: 66px !important; image-rendering: pixelated; }
+    .scan-link strong { display: block; margin-bottom: 4px; color: #ecf1ee; font-size: 13px; }
+    .scan-link a { color: #74d5c9; font-size: 12px; overflow-wrap: anywhere; }
+    .scanner { position: fixed; inset: 0; background: #101212; }
+    .scanner[hidden], .board[hidden] { display: none; }
+    #ar-container { position: absolute; inset: 0; overflow: hidden; }
+    #ar-container video, #ar-container canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .hud { position: fixed; z-index: 5; left: 50%; bottom: max(22px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(92vw, 520px); border: 1px solid #34433e; border-radius: 18px; padding: 15px 18px; background: #111a18eF; box-shadow: 0 14px 50px #0008; }
+    .hud-line { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    #state { font-weight: 700; }
+    #count { color: #74d5c9; font: 700 12px ui-monospace, monospace; }
+    #hint { margin-top: 6px; color: #a2b1aa; font-size: 13px; line-height: 1.4; }
+    .hud-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .hud button { border: 1px solid #43615a; border-radius: 999px; padding: 9px 14px; background: #20312d; color: #e9f3ef; cursor: pointer; }
+    .hud button.primary { border-color: #74d5c9; background: #74d5c9; color: #10201c; font-weight: 750; }
+    .hud button:disabled { opacity: .55; cursor: wait; }
+    .error { color: #ffb5a0 !important; }
+    @media (max-width: 720px) {
+      .board { min-height: 100svh; padding: 22px; gap: 22px; }
+      .topline { display: block; }
+      .badge { display: inline-block; margin-top: 16px; }
+      .target-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      .target-meta { display: block; font-size: 9px; line-height: 1.7; }
+      .footer { align-items: start; flex-direction: column; }
+      .scan-link { min-width: 0; }
+    }
+  </style>
+  <script src="../../vendor/mindar/1.2.5/mindar-image-compiler.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "../../vendor/mindar/1.2.5/three.module.min.js",
+        "mindar-image-three": "../../vendor/mindar/1.2.5/mindar-image-three.prod.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main id="board" class="board">
+    <header class="topline">
+      <div>
+        <div class="eyebrow">XR Sandbox · image target study 01</div>
+        <h1>One sculpture.<br />Three anchors.</h1>
+        <p class="intro">Each image holds one part of a shared procedural sculpture. Keep the cards fixed on this screen while the phone tracks them.</p>
+      </div>
+      <div class="badge">1920 × 1080 test board</div>
+    </header>
+    <section id="target-row" class="target-row" aria-label="Three MindAR image targets"></section>
+    <footer class="footer">
+      <p>Place the three cards in one row. The card centers use a measured 1.125 target-width spacing. The sculpture links use the same ratio.</p>
+      <div class="scan-link">
+        <div id="qr" aria-label="QR code for the camera page"></div>
+        <div><strong>Open the camera page</strong><a id="scan-url"></a></div>
+      </div>
+    </footer>
+  </main>
+
+  <section id="scanner" class="scanner" hidden>
+    <div id="ar-container"></div>
+    <div class="hud">
+      <div class="hud-line"><span id="state">Ready</span><span id="count">0 / 3</span></div>
+      <div id="hint">Compile the three image anchors, then start the camera.</div>
+      <div class="hud-actions">
+        <button id="start" class="primary">Compile and start camera</button>
+        <button id="download" disabled>Save targets.mind</button>
+        <button id="back">Board</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { MindARThree } from 'mindar-image-three';
+    import { TARGETS, TARGET_SIZE, LINK_LENGTH, segmentForTarget } from './sculpture-layout.mjs';
+
+    const params = new URLSearchParams(location.search);
+    const board = document.getElementById('board');
+    const scanner = document.getElementById('scanner');
+    const row = document.getElementById('target-row');
+    const stateEl = document.getElementById('state');
+    const countEl = document.getElementById('count');
+    const hintEl = document.getElementById('hint');
+    const startButton = document.getElementById('start');
+    const downloadButton = document.getElementById('download');
+    let targetFileUrl = null;
+    let mindar = null;
+
+    function seeded(seed) {
+      let value = seed >>> 0;
+      return () => {
+        value = (1664525 * value + 1013904223) >>> 0;
+        return value / 4294967296;
+      };
+    }
+
+    function makeTargetCanvas(target) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = TARGET_SIZE;
+      const ctx = canvas.getContext('2d');
+      const random = seeded(target.seed);
+      ctx.fillStyle = '#f0eee8';
+      ctx.fillRect(0, 0, TARGET_SIZE, TARGET_SIZE);
+      ctx.fillStyle = '#101918';
+      ctx.fillRect(12, 12, TARGET_SIZE - 24, TARGET_SIZE - 24);
+
+      for (let i = 0; i < 96; i++) {
+        const x = 26 + random() * (TARGET_SIZE - 52);
+        const y = 26 + random() * (TARGET_SIZE - 52);
+        const size = 5 + random() * 22;
+        ctx.fillStyle = random() > 0.5 ? '#f0eee8' : target.color;
+        if (i % 3 === 0) {
+          ctx.beginPath();
+          ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (i % 3 === 1) {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(random() * Math.PI);
+          ctx.fillRect(-size * 0.5, -size * 0.5, size, size * (0.3 + random() * 0.8));
+          ctx.restore();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(x, y - size * 0.6);
+          ctx.lineTo(x + size * 0.6, y + size * 0.5);
+          ctx.lineTo(x - size * 0.6, y + size * 0.5);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      ctx.strokeStyle = target.color;
+      ctx.lineWidth = 9;
+      ctx.beginPath();
+      ctx.arc(TARGET_SIZE / 2, TARGET_SIZE / 2, 58, 0.25, Math.PI * 1.75);
+      ctx.stroke();
+      ctx.fillStyle = '#f0eee8';
+      ctx.beginPath();
+      ctx.arc(TARGET_SIZE / 2, TARGET_SIZE / 2, 15, 0, Math.PI * 2);
+      ctx.fill();
+
+      const corner = 30;
+      ctx.fillStyle = target.color;
+      [[25, 25], [TARGET_SIZE - 25, 25], [25, TARGET_SIZE - 25], [TARGET_SIZE - 25, TARGET_SIZE - 25]].forEach(([x, y], i) => {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(i * Math.PI / 2);
+        ctx.fillRect(0, 0, corner, 8);
+        ctx.fillRect(0, 0, 8, corner);
+        ctx.restore();
+      });
+      return canvas;
+    }
+
+    const targetCanvases = TARGETS.map((target) => makeTargetCanvas(target));
+
+    function showBoard() {
+      board.hidden = false;
+      scanner.hidden = true;
+      const scanUrl = new URL('./index.html?mode=scan&autostart=1', location.href).href;
+      const urlEl = document.getElementById('scan-url');
+      urlEl.href = scanUrl;
+      urlEl.textContent = scanUrl;
+      if (window.QRCode) {
+        document.getElementById('qr').replaceChildren();
+        new QRCode(document.getElementById('qr'), { text: scanUrl, width: 66, height: 66, colorDark: '#101212', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+      }
+      row.replaceChildren(...TARGETS.map((target, i) => {
+        const card = document.createElement('article');
+        card.className = 'target-card';
+        card.style.setProperty('--tone', target.color);
+        card.appendChild(targetCanvases[i]);
+        const meta = document.createElement('div');
+        meta.className = 'target-meta';
+        meta.innerHTML = `<b>${String(target.index + 1).padStart(2, '0')}</b><span>${target.name}</span>`;
+        card.appendChild(meta);
+        return card;
+      }));
+    }
+
+    function showScanner() {
+      board.hidden = true;
+      scanner.hidden = false;
+    }
+
+    function logState(state, hint, isError = false) {
+      stateEl.textContent = state;
+      hintEl.textContent = hint;
+      hintEl.classList.toggle('error', isError);
+    }
+
+    function imageFromCanvas(canvas) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error('A target image failed to load.'));
+        image.src = canvas.toDataURL('image/png');
+      });
+    }
+
+    function addNode(parent, target, data) {
+      const crystal = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.16, 1),
+        new THREE.MeshStandardMaterial({ color: data.color, metalness: 0.42, roughness: 0.22, emissive: data.color, emissiveIntensity: 0.22 }),
+      );
+      crystal.position.set(...data.position);
+      parent.add(crystal);
+      const orbit = new THREE.Mesh(
+        new THREE.TorusGeometry(0.23, 0.012, 8, 48),
+        new THREE.MeshBasicMaterial({ color: 0xf0eee8, transparent: true, opacity: 0.82 }),
+      );
+      orbit.position.copy(crystal.position);
+      orbit.rotation.x = Math.PI / 2.4;
+      parent.add(orbit);
+      crystal.userData.orbit = orbit;
+      crystal.userData.targetIndex = target.index;
+    }
+
+    function addLink(parent, link, index) {
+      const from = new THREE.Vector3(...link.from);
+      const to = new THREE.Vector3(...link.to);
+      const curve = new THREE.CatmullRomCurve3([
+        from,
+        new THREE.Vector3((from.x + to.x) * 0.34, 0.14, 0.2),
+        new THREE.Vector3((from.x + to.x) * 0.68, -0.14, 0.2),
+        to,
+      ]);
+      const linkMesh = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 40, 0.018, 8, false),
+        new THREE.MeshStandardMaterial({ color: index === 0 ? '#f7734a' : '#57d6cb', emissive: index === 0 ? '#9c351c' : '#145e59', metalness: 0.36, roughness: 0.28 }),
+      );
+      parent.add(linkMesh);
+    }
+
+    async function startCamera() {
+      startButton.disabled = true;
+      logState('Compiling 3 anchors', 'The phone builds one MindAR target file in this browser.');
+      try {
+        if (!window.MINDAR?.IMAGE?.Compiler) throw new Error('MindAR compiler did not load. Check the network and reload.');
+        const images = await Promise.all(targetCanvases.map(imageFromCanvas));
+        const compiler = new window.MINDAR.IMAGE.Compiler();
+        await compiler.compileImageTargets(images, (progress) => {
+          logState(`Compiling ${Math.round(progress)}%`, 'The app is preparing the three image anchors.');
+        });
+        const bytes = compiler.exportData();
+        const targetBlob = new Blob([bytes], { type: 'application/octet-stream' });
+        targetFileUrl = URL.createObjectURL(targetBlob);
+        downloadButton.disabled = false;
+        downloadButton.onclick = () => {
+          const link = document.createElement('a');
+          link.href = targetFileUrl;
+          link.download = 'three-anchor-targets.mind';
+          link.click();
+        };
+
+        mindar = new MindARThree({
+          container: document.getElementById('ar-container'),
+          imageTargetSrc: targetFileUrl,
+          maxTrack: 3,
+          uiLoading: 'no',
+          uiScanning: 'no',
+          uiError: 'no',
+        });
+        const { renderer, scene, camera } = mindar;
+        scene.add(new THREE.HemisphereLight(0xe6fff8, 0x26332f, 1.6));
+        const keyLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        keyLight.position.set(-1, 2, 2);
+        scene.add(keyLight);
+
+        const anchors = TARGETS.map((target) => {
+          const anchor = mindar.addAnchor(target.index);
+          const segment = new THREE.Group();
+          anchor.group.add(segment);
+          const layout = segmentForTarget(target.index);
+          layout.nodes.forEach((node) => addNode(segment, target, node));
+          layout.links.forEach((link) => addLink(segment, link, target.index));
+          return anchor;
+        });
+
+        await mindar.start();
+        logState('Camera ready', 'Point at the three cards. Keep them in one fixed row.');
+        let lastCount = -1;
+        renderer.setAnimationLoop((time) => {
+          const visibleCount = anchors.filter((anchor) => anchor.group.visible).length;
+          if (visibleCount !== lastCount) {
+            lastCount = visibleCount;
+            countEl.textContent = `${visibleCount} / ${TARGETS.length}`;
+            logState(visibleCount === TARGETS.length ? 'Sculpture connected' : 'Tracking anchors', visibleCount === TARGETS.length
+              ? 'All three pieces share the calibrated row and form one sculpture.'
+              : 'Move the camera until all three target cards appear.');
+          }
+          const seconds = time / 1000;
+          scene.traverse((object) => {
+            if (object.userData.targetIndex !== undefined) {
+              object.rotation.y = seconds * 0.55;
+              object.userData.orbit.rotation.z = seconds * 0.7;
+            }
+          });
+          renderer.render(scene, camera);
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logState('Test could not start', message, true);
+        startButton.disabled = false;
+      }
+    }
+
+    document.getElementById('back').addEventListener('click', async () => {
+      if (mindar) {
+        mindar.stop();
+        mindar.renderer.setAnimationLoop(null);
+        mindar.renderer.dispose();
+        mindar = null;
+      }
+      showBoard();
+    });
+    startButton.addEventListener('click', startCamera);
+
+    if (params.get('mode') === 'scan') {
+      showScanner();
+      if (params.get('autostart') === '1') startCamera();
+    } else {
+      showBoard();
+    }
+  </script>
+</body>
+</html>
