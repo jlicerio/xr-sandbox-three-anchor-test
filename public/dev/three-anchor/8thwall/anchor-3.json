@@ -1,0 +1,23 @@
+{
+  "imagePath": "image-targets/anchor-3_luminance.png",
+  "metadata": null,
+  "name": "anchor-3",
+  "type": "PLANAR",
+  "properties": {
+    "left": 0,
+    "top": 0,
+    "width": 480,
+    "height": 640,
+    "isRotated": false,
+    "originalWidth": 480,
+    "originalHeight": 640
+  },
+  "resources": {
+    "originalImage": "anchor-3_original.png",
+    "croppedImage": "anchor-3_cropped.png",
+    "thumbnailImage": "anchor-3_thumbnail.png",
+    "luminanceImage": "anchor-3_luminance.png"
+  },
+  "created": 1790899410297,
+  "updated": 1790899410297
+}

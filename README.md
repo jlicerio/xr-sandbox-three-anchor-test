@@ -1,12 +1,17 @@
-# XR Sandbox: Three Anchor Sculpture Test
+# XR Sandbox: Three Anchor Tracker Comparison
 
-This public test hosts one reusable MindAR image-target experiment on GitHub Pages.
+This public GitHub Pages test compares MindAR and the MIT 8th Wall Engine image tracker with the same three image targets and one procedural sculpture.
 
 - Board: `https://jlicerio.github.io/xr-sandbox-three-anchor-test/dev/three-anchor/?mode=board`
-- Camera page: `https://jlicerio.github.io/xr-sandbox-three-anchor-test/dev/three-anchor/index.html?mode=scan&autostart=1`
+- MindAR: `https://jlicerio.github.io/xr-sandbox-three-anchor-test/dev/three-anchor/index.html?mode=scan&engine=mindar`
+- 8th Wall image tracking: `https://jlicerio.github.io/xr-sandbox-three-anchor-test/dev/three-anchor/index.html?mode=scan&engine=8thwall`
 
-Keep the board visible on a second screen. Scan its QR code with a phone browser. The camera page compiles three image targets in the browser and tracks one connected procedural sculpture.
+Scan the engine QR code with a phone. Tap **Start camera**. Test each engine in a separate run. Keep all three target cards in one fixed row.
 
-The camera page requires HTTPS and camera permission. Phone tracking was not part of the GitHub Pages deployment check.
+The 8th Wall mode uses `@8thwall/engine@0.1.0` under its MIT license. This engine build supports image tracking. It does not include world tracking. This test disables world tracking.
 
-MindAR 1.2.5 and its MIT license are in `public/vendor/mindar/1.2.5`. Three.js includes its license notice in `three.module.min.js`. The QR code library loads from jsDelivr.
+The 8th Wall target metadata and luminance images use output from the official `@8thwall/image-target-cli@1.0.0`. The input targets are the same PNG files that MindAR compiles in the browser.
+
+MindAR 1.2.5 and its MIT license are in `public/vendor/mindar/1.2.5`. The Three.js module uses the same vendor file. The QR code library loads from jsDelivr.
+
+A static deployment check confirms page and asset access. A phone test must confirm camera access, detection, pose stability, target loss, and recovery.
