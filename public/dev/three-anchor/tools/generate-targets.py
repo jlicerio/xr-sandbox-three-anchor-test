@@ -2,6 +2,8 @@
 """Generate three rounded, ArUco-inspired image targets for both AR engines."""
 
 from pathlib import Path
+from time import time
+import json
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -134,6 +136,59 @@ def save_target(index, rows):
     )
 
 
+def build_composite():
+    sheet = Image.new("RGB", (point(SIZE[0]), point(SIZE[1])), PAPER)
+    positions = ((20, 100), (252, 100), (136, 332))
+    panel_size = 208
+    for index, rows in enumerate(PATTERNS):
+        artwork = build_target(index, rows)
+        marker = artwork.crop((52, 88, 428, 464)).resize(
+            (point(panel_size), point(panel_size)), Image.Resampling.LANCZOS
+        )
+        sheet.paste(marker, (point(positions[index][0]), point(positions[index][1])))
+    return sheet.resize(SIZE, Image.Resampling.LANCZOS)
+
+
+def save_composite():
+    name = "composite"
+    image = build_composite()
+    image.save(TARGET_DIR / f"{name}.png", optimize=True)
+    image.save(EIGHTH_WALL_DIR / f"{name}_original.png", optimize=True)
+    image.save(EIGHTH_WALL_DIR / f"{name}_cropped.png", optimize=True)
+    image.resize((263, 350), Image.Resampling.LANCZOS).save(
+        EIGHTH_WALL_DIR / f"{name}_thumbnail.png", optimize=True
+    )
+    image.convert("L").convert("RGB").save(
+        EIGHTH_WALL_DIR / f"{name}_luminance.png", optimize=True
+    )
+    target = {
+        "imagePath": f"{name}_luminance.png",
+        "metadata": None,
+        "name": name,
+        "type": "PLANAR",
+        "properties": {
+            "left": 0,
+            "top": 0,
+            "width": SIZE[0],
+            "height": SIZE[1],
+            "isRotated": False,
+            "originalWidth": SIZE[0],
+            "originalHeight": SIZE[1],
+        },
+        "resources": {
+            "originalImage": f"{name}_original.png",
+            "croppedImage": f"{name}_cropped.png",
+            "thumbnailImage": f"{name}_thumbnail.png",
+            "luminanceImage": f"{name}_luminance.png",
+        },
+        "created": int(time() * 1000),
+        "updated": int(time() * 1000),
+    }
+    (EIGHTH_WALL_DIR / f"{name}.json").write_text(
+        json.dumps(target, indent=2) + "\n"
+    )
+
+
 def rotate_pattern(rows):
     return tuple("".join(row[column] for row in reversed(rows)) for column in range(len(rows)))
 
@@ -155,6 +210,7 @@ def main():
     validate_patterns()
     for index, rows in enumerate(PATTERNS):
         save_target(index, rows)
+    save_composite()
 
 
 if __name__ == "__main__":

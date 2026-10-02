@@ -19,6 +19,10 @@
     .target-row { display: grid; grid-template-columns: repeat(3, minmax(0, 256px)); justify-content: center; align-content: center; gap: 32px; }
     .target-card { min-width: 0; }
     .target-card img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border: 1px solid #7a8d83; box-shadow: 0 12px 36px #0008; }
+    .board.composite-print { min-height: 100svh; padding: 0; display: grid; place-items: center; background: #f3f1ea; }
+    .composite-print .topline, .composite-print .footer { display: none; }
+    .composite-print .target-row { display: block; width: min(100vw, 480px); }
+    .composite-print .target-row img { display: block; width: 100%; height: auto; border: 0; box-shadow: none; }
     .target-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; color: #bac6c0; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
     .target-meta b { color: var(--tone); }
     .footer { display: flex; align-items: end; justify-content: space-between; gap: 24px; border-top: 1px solid #293331; padding-top: 20px; }
@@ -85,6 +89,7 @@
       <div class="scan-links">
         <div class="scan-link"><div class="qr" id="qr-mindar" aria-label="MindAR camera QR code"></div><div><strong>MindAR</strong><a id="mindar-url"></a></div></div>
         <div class="scan-link"><div class="qr" id="qr-8thwall" aria-label="8th Wall camera QR code"></div><div><strong>8th Wall image tracking</strong><a id="8thwall-url"></a></div></div>
+        <div class="scan-link"><div class="qr" id="qr-composite" aria-label="8th Wall single composite target QR code"></div><div><strong>8th Wall · one image</strong><a id="composite-url"></a><a href="./targets/composite.png">Print image target</a></div></div>
       </div>
     </footer>
   </main>
@@ -108,6 +113,8 @@
     import { TARGETS, LINK_LENGTH, segmentForTarget } from './sculpture-layout.mjs';
 
     const params = new URLSearchParams(location.search);
+    const isCompositeLayout = params.get('layout') === 'composite';
+    const compositeTarget = { index: 0, name: 'Composite image', source: 'targets/composite.png' };
     const board = document.getElementById('board');
     const scanner = document.getElementById('scanner');
     const row = document.getElementById('target-row');
@@ -126,24 +133,35 @@
     function loadTargetImage(target) {
       return new Promise((resolve, reject) => {
         const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = () => reject(new Error(`Target image ${target.index + 1} failed to load.`));
-        image.src = new URL(`targets/anchor-${target.index + 1}.png`, location.href);
+        image.onload = () => { image.alt = target.name; resolve(image); };
+        image.onerror = () => reject(new Error(`Target image ${target.name} failed to load.`));
+        image.src = new URL(target.source || `targets/anchor-${target.index + 1}.png`, location.href);
       });
     }
 
-    targetImages = TARGETS.map((target) => loadTargetImage(target));
+    targetImages = (isCompositeLayout ? [compositeTarget] : TARGETS).map((target) => loadTargetImage(target));
 
     function showBoard() {
       board.hidden = false;
       scanner.hidden = true;
+      if (isCompositeLayout) {
+        board.classList.add('composite-print');
+        row.setAttribute('aria-label', 'Single composite image target');
+        Promise.all(targetImages).then((images) => row.replaceChildren(images[0]));
+        return;
+      }
       const mindarUrl = new URL('./index.html?mode=scan&engine=mindar', location.href).href;
       const eightwallUrl = new URL('./index.html?mode=scan&engine=8thwall', location.href).href;
-      for (const [engine, url] of [['mindar', mindarUrl], ['8thwall', eightwallUrl]]) {
-        const link = document.getElementById(`${engine}-url`);
+      const compositeUrl = new URL('./index.html?mode=scan&engine=8thwall&layout=composite', location.href).href;
+      for (const [linkId, qrId, url] of [
+        ['mindar-url', 'qr-mindar', mindarUrl],
+        ['8thwall-url', 'qr-8thwall', eightwallUrl],
+        ['composite-url', 'qr-composite', compositeUrl],
+      ]) {
+        const link = document.getElementById(linkId);
         link.href = url;
         link.textContent = 'Open camera';
-        const qr = document.getElementById(`qr-${engine}`);
+        const qr = document.getElementById(qrId);
         qr.replaceChildren();
         if (window.QRCode) new QRCode(qr, { text: url, width: 66, height: 66, colorDark: '#101212', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
       }
@@ -215,14 +233,28 @@
       parent.add(linkMesh);
     }
 
+    function addCompositeSculpture(parent) {
+      const positions = [
+        [-116 / 480, 116 / 480, 0.16],
+        [116 / 480, 116 / 480, 0.16],
+        [0, -116 / 480, 0.16],
+      ];
+      TARGETS.forEach((target) => {
+        addNode(parent, target, { position: positions[target.index], color: target.color });
+      });
+      addLink(parent, { from: positions[0], to: positions[1] }, 0);
+      addLink(parent, { from: positions[1], to: positions[2] }, 1);
+    }
+
     let lastVisibleCount = -1;
-    function updateCount(visibleCount) {
+    function updateCount(visibleCount, targetCount = TARGETS.length) {
       if (visibleCount === lastVisibleCount) return;
       lastVisibleCount = visibleCount;
-      countEl.textContent = `${visibleCount} / ${TARGETS.length}`;
-      logState(visibleCount === TARGETS.length ? 'Three targets found' : 'Tracking targets', visibleCount === TARGETS.length
-        ? 'All target images are visible. Check how the sculpture moves as you move the phone.'
-        : 'Move the phone across the target row. Keep the printed cards still.');
+      countEl.textContent = `${visibleCount} / ${targetCount}`;
+      const complete = visibleCount === targetCount;
+      logState(complete ? (isCompositeLayout ? 'Composite target found' : 'Three targets found') : 'Tracking targets', complete
+        ? (isCompositeLayout ? 'All sculpture parts share one image target.' : 'All target images are visible. Check how the sculpture moves as you move the phone.')
+        : (isCompositeLayout ? 'Keep the three image panels fixed together.' : 'Move the phone across the target row. Keep the printed cards still.'));
     }
 
     async function startMindAR() {
@@ -242,19 +274,22 @@
       });
       const { renderer, scene, camera } = mindar;
       addLights(scene);
-      const anchors = TARGETS.map((target) => {
-        const anchor = mindar.addAnchor(target.index);
-        const segment = new THREE.Group();
-        anchor.group.add(segment);
-        const layout = segmentForTarget(target.index);
-        layout.nodes.forEach((node) => addNode(segment, target, node));
-        layout.links.forEach((link) => addLink(segment, link, target.index));
-        return anchor;
-      });
+      const anchors = isCompositeLayout
+        ? [mindar.addAnchor(0)]
+        : TARGETS.map((target) => {
+          const anchor = mindar.addAnchor(target.index);
+          const segment = new THREE.Group();
+          anchor.group.add(segment);
+          const layout = segmentForTarget(target.index);
+          layout.nodes.forEach((node) => addNode(segment, target, node));
+          layout.links.forEach((link) => addLink(segment, link, target.index));
+          return anchor;
+        });
+      if (isCompositeLayout) addCompositeSculpture(anchors[0].group);
       await mindar.start();
-      logState('Camera ready · MindAR', 'Move the phone across the target row. Keep the printed cards still.');
+      logState('Camera ready · MindAR', isCompositeLayout ? 'Keep the composite image still in view.' : 'Move the phone across the target row. Keep the printed cards still.');
       renderer.setAnimationLoop((time) => {
-        updateCount(anchors.filter((anchor) => anchor.group.visible).length);
+        updateCount(anchors.filter((anchor) => anchor.group.visible).length, isCompositeLayout ? 1 : TARGETS.length);
         animateScene(scene, time / 1000);
         renderer.render(scene, camera);
       });
@@ -329,13 +364,18 @@
 
     async function start8thWall() {
       xr8 = await waitForXR8();
-      const targets = await Promise.all(TARGETS.map(async (target) => {
-        const url = new URL(`8thwall/anchor-${target.index + 1}.json`, location.href);
+      const targetSpecs = isCompositeLayout
+        ? [compositeTarget]
+        : TARGETS.map((target) => ({ ...target, metadata: `8thwall/anchor-${target.index + 1}.json`, luminance: `8thwall/anchor-${target.index + 1}_luminance.png` }));
+      const targets = await Promise.all(targetSpecs.map(async (target) => {
+        const metadataPath = target.metadata || '8thwall/composite.json';
+        const luminancePath = target.luminance || '8thwall/composite_luminance.png';
+        const url = new URL(metadataPath, location.href);
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Target metadata load failed: ${response.status}`);
         const data = await response.json();
-        data.imagePath = new URL(`8thwall/anchor-${target.index + 1}_luminance.png`, location.href).href;
-        data.metadata = { index: target.index };
+        data.imagePath = new URL(luminancePath, location.href).href;
+        data.metadata = { index: target.index, composite: isCompositeLayout };
         return data;
       }));
       xr8.XrController.configure({ disableWorldTracking: true, imageTargetData: targets });
@@ -356,14 +396,14 @@
         group.quaternion.set(detail.rotation.x, detail.rotation.y, detail.rotation.z, detail.rotation.w);
         group.scale.setScalar(detail.scale);
         group.visible = true;
-        updateCount([...anchors.values()].filter((anchor) => anchor.visible).length);
+        updateCount([...anchors.values()].filter((anchor) => anchor.visible).length, expectedTargets.size);
       };
       const loseTarget = ({ detail }) => {
         const group = anchors.get(detail.name);
         if (group) group.visible = false;
         foundTargets.delete(detail.name);
         logDiagnostic(`Found ${foundTargets.size}/${expectedTargets.size}: ${[...foundTargets].join(', ') || 'none'}`);
-        updateCount([...anchors.values()].filter((anchor) => anchor.visible).length);
+        updateCount([...anchors.values()].filter((anchor) => anchor.visible).length, expectedTargets.size);
       };
       const reportScanning = ({ detail }) => {
         const items = Array.isArray(detail?.imageTargets) ? detail.imageTargets : detail?.imageTargets ? [detail.imageTargets] : [];
@@ -395,19 +435,27 @@
             ({ scene } = xr8.Threejs.xrScene());
             addLights(scene);
             lastVisibleCount = -1;
-            updateCount(0);
-            TARGETS.forEach((target) => {
+            updateCount(0, expectedTargets.size);
+            if (isCompositeLayout) {
               const group = new THREE.Group();
-              const segment = new THREE.Group();
               group.visible = false;
-              group.add(segment);
-              const layout = segmentForTarget(target.index);
-              layout.nodes.forEach((node) => addNode(segment, target, node));
-              layout.links.forEach((link) => addLink(segment, link, target.index));
+              addCompositeSculpture(group);
               scene.add(group);
-              anchors.set(`anchor-${target.index + 1}`, group);
-            });
-            logState('Camera ready · 8th Wall', 'Move the phone across the target row. Keep the printed cards still.');
+              anchors.set('composite', group);
+            } else {
+              TARGETS.forEach((target) => {
+                const group = new THREE.Group();
+                const segment = new THREE.Group();
+                group.visible = false;
+                group.add(segment);
+                const layout = segmentForTarget(target.index);
+                layout.nodes.forEach((node) => addNode(segment, target, node));
+                layout.links.forEach((link) => addLink(segment, link, target.index));
+                scene.add(group);
+                anchors.set(`anchor-${target.index + 1}`, group);
+              });
+            }
+            logState('Camera ready · 8th Wall', isCompositeLayout ? 'Keep the composite image still in view.' : 'Move the phone across the target row. Keep the printed cards still.');
           },
           onUpdate: () => { if (scene) animateScene(scene, elapsed += 1 / 60); },
           listeners: [
@@ -442,8 +490,9 @@
     async function startCamera() {
       startButton.disabled = true;
       arContainer.classList.toggle('eightwall', activeEngine === '8thwall');
-      countEl.textContent = `0 / ${TARGETS.length}`;
-      logState(`Loading · ${activeEngine === '8thwall' ? '8th Wall' : 'MindAR'}`, 'Loading shared target images and camera tools.');
+      const activeTargetCount = isCompositeLayout ? 1 : TARGETS.length;
+      countEl.textContent = `0 / ${activeTargetCount}`;
+      logState(`Loading · ${activeEngine === '8thwall' ? '8th Wall' : 'MindAR'}`, isCompositeLayout ? 'Loading one composite image target and camera tools.' : 'Loading shared target images and camera tools.');
       try {
         await Promise.all(targetImages);
         stopCamera = activeEngine === '8thwall' ? await start8thWall() : await startMindAR();
@@ -456,7 +505,7 @@
 
     document.getElementById('back').addEventListener('click', () => {
       if (stopCamera) { stopCamera(); stopCamera = null; }
-      location.href = new URL('./index.html?mode=board', location.href).href;
+      location.href = new URL(isCompositeLayout ? './index.html?mode=board&layout=composite' : './index.html?mode=board', location.href).href;
     });
     startButton.addEventListener('click', startCamera);
     if (activeEngine === '8thwall') startButton.textContent = 'Start 8th Wall camera';

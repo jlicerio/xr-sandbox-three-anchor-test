@@ -1,0 +1,23 @@
+{
+  "imagePath": "composite_luminance.png",
+  "metadata": null,
+  "name": "composite",
+  "type": "PLANAR",
+  "properties": {
+    "left": 0,
+    "top": 0,
+    "width": 480,
+    "height": 640,
+    "isRotated": false,
+    "originalWidth": 480,
+    "originalHeight": 640
+  },
+  "resources": {
+    "originalImage": "composite_original.png",
+    "croppedImage": "composite_cropped.png",
+    "thumbnailImage": "composite_thumbnail.png",
+    "luminanceImage": "composite_luminance.png"
+  },
+  "created": 1790905675542,
+  "updated": 1790905675542
+}
