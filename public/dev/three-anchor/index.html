@@ -183,6 +183,10 @@
     function showScanner() {
       board.hidden = true;
       scanner.hidden = false;
+      if (isCompositeLayout) {
+        countEl.textContent = '0 / 1';
+        logState('Ready', 'Keep the full composite image in view.');
+      }
     }
 
     function logState(state, hint, isError = false) {
