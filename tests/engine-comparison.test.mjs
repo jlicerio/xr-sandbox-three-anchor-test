@@ -28,3 +28,16 @@ test('8th Wall target files and licensed engine assets exist locally', () => {
   assert.ok(existsSync(resolve(root, 'public/dev/three-anchor/vendor/8thwall/xr.js')));
   assert.ok(existsSync(resolve(root, 'public/dev/three-anchor/vendor/8thwall/LICENSE')));
 });
+
+test('8th Wall camera canvas keeps a cover fit after engine style changes', () => {
+  assert.match(page, /function installCanvasCoverFit\(/);
+  assert.match(page, /new MutationObserver\(/);
+  assert.match(page, /Math\.max\(width \/ sourceWidth, height \/ sourceHeight\)/);
+});
+
+test('8th Wall reports configured targets and each found target name', () => {
+  assert.match(page, /reality\.imagescanning/);
+  assert.match(page, /reality\.imagefound/);
+  assert.match(page, /detail\.name/);
+  assert.match(page, /id="diagnostics"/);
+});

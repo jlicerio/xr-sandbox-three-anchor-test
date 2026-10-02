@@ -12,6 +12,8 @@ The 8th Wall mode uses `@8thwall/engine@0.1.0` under its MIT license. This engin
 
 The 8th Wall target metadata and luminance images use output from the official `@8thwall/image-target-cli@1.0.0`. The input targets are the same PNG files that MindAR compiles in the browser.
 
+The 8th Wall camera view uses the XR Sandbox cover-fit method. Its scanner shows the configured and detected target names.
+
 MindAR 1.2.5 and its MIT license are in `public/vendor/mindar/1.2.5`. The Three.js module uses the same vendor file. The QR code library loads from jsDelivr.
 
 A static deployment check confirms page and asset access. A phone test must confirm camera access, detection, pose stability, target loss, and recovery.
